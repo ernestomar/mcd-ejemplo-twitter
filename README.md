@@ -2,7 +2,23 @@
 
 ## Cómo ejecutar este proyecto.
 
-### Configurar el virtual env
+### Contenedores
+
+Para ejecutar este proyecto se requiere ejecutar dos contenedores:
+
+MySQL:
+
+```
+docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql:latest
+```
+
+REDIS:
+
+```
+docker run --name some-redis -p 6379:6379 -d redis:latest
+```
+
+### Python Configurar el virtual env
 
 Inicializamos el virtual env. Para inicializar un entorno virtual en Python y usar pip, sigue los siguientes pasos: 
 1. Abre una terminal o línea de comandos en tu sistema operativo. 
@@ -39,7 +55,9 @@ En caso de que se desee actualizar los requerimientos: `pip freeze > requirement
 Esto restablecerá el prompt de la línea de comandos a su estado original y dejará de usar el entorno virtual.
 
 ## Preparamos la BBDD Relacional.
--  A continuación el código SQL para crear las tablas en una base de datos MySQL:
+Los scripts se deben ejecutar en una BBDD denóminada `twitter`.
+
+A continuación el código SQL para crear las tablas en una base de datos MySQL:
 
 ```sql
 
@@ -169,8 +187,59 @@ ORDER BY timestamp DESC;
 
 ```
 
+## Primera aproximación - Solo relacional
+
+Se implementan dos scripts que simulan las siguientes operaciones:
+
+. `timeline_mysql.py`: Lista el timeline de un usuario consultandolo directamente de Base de Datos
+. `write_mysql.py`: Crea un nuevo tweet para un usuario en particular, inserta el tweet en la Base de Datos.
+
+### timeline_mysql.py
+
+Este código implementa una función llamada `connect_to_database` que utiliza la biblioteca PyMySQL para conectarse a una base de datos MySQL. La función toma cuatro argumentos: `host`, `user`, `password` y `db_name`, que representan la dirección del host de la base de datos, el nombre de usuario, la contraseña y el nombre de la base de datos que se va a utilizar, respectivamente. La función devuelve un objeto de conexión a la base de datos.
+
+El código también implementa una función llamada `get_user_timeline` que toma dos argumentos: una conexión a la base de datos y un `user_id` (identificador de usuario) y devuelve una lista de tweets de los usuarios que sigue el usuario con el `user_id` proporcionado. La lista de tweets se ordena por fecha y hora de creación en orden descendente.
+
+En la sección `if __name__ == "__main__":`, se crea una conexión a la base de datos utilizando la función `connect_to_database`. El segundo argumento que se pasa al script de línea de comandos se convierte en un número entero que se utiliza como `user_id` para llamar a la función `get_user_timeline` y obtener la lista de tweets. Finalmente, el código imprime la lista de tweets en la pantalla en un formato específico.
+
+### write_mysql.py
+
+Este código se encarga de escribir un tweet en una base de datos MySQL.
+
+Primero, se importa el módulo PyMySQL y el módulo sys. Luego, se definen dos funciones: `connect_to_database()` y `write_tweet()`.
+
+La función `connect_to_database()` se utiliza para conectarse a la base de datos MySQL. Toma cuatro parámetros: `host`, `user`, `password`, y `db_name`. Estos parámetros son usados para crear una conexión con la base de datos usando la función `pymysql.connect()`. Los parámetros `charset` y `cursorclass` son también especificados en la conexión, para asegurar que los caracteres son codificados correctamente y que los resultados de las consultas son devueltos como diccionarios.
+
+La función `write_tweet()` se utiliza para escribir un tweet en la base de datos. Toma tres parámetros: `connection`, `user_id` y `tweet`. Primero, crea un cursor para la conexión y luego ejecuta una consulta SQL para insertar los valores `user_id`, `tweet` y la hora actual en la tabla `Tweets`. Finalmente, se realiza la operación de guardar la transacción en la base de datos mediante `connection.commit()` y se imprime un mensaje de confirmación de que el tweet ha sido enviado.
+
+Si el script se ejecuta directamente, se llama a la función `connect_to_database()` para crear una conexión con la base de datos especificada. Luego, se leen dos argumentos de línea de comando usando `sys.argv[]`: el primer argumento es el `user_id` y el segundo es el contenido del tweet. Después se llama a la función `write_tweet()` para escribir el tweet en la base de datos.
 
 
-## Primera aproximación
+## Segunda aproximación - Agregando Redis para Cache.
 
-En el archivo twitter_mysql.py se tiene la lógica tradicional de acceso.
+En la segunda aproximación se implementan scripts que intentan habilitar un CACHE en Redis.
+
+. `timeline_redis.py`: Consulta si el timeline se encuentra en CACHE, si es así lo retorna caso contrario lo consylta de BBDD.
+. `write_redis_inv.py`: Escribe el tweet en BBDD luego intenta invalidar el CACHE, pero tiene un ERROR, se recomienda corregir el script.
+
+### timeline_redis.py
+
+El script es una función de Python que se conecta a una base de datos MySQL, consulta la base de datos para obtener el timeline de un usuario, y almacena el resultado en Redis, una base de datos en memoria.
+
+El script utiliza la biblioteca PyMySQL para conectarse a la base de datos MySQL y la biblioteca Redis para conectarse a Redis.
+
+El script primero define una función llamada "connect_to_database" que toma los detalles de la conexión a la base de datos MySQL (nombre de host, nombre de usuario, contraseña y nombre de la base de datos) como argumentos y devuelve una conexión a la base de datos.
+
+A continuación, la función "get_user_timeline" toma la conexión a la base de datos y el ID de usuario como argumentos y devuelve el timeline del usuario. La función primero intenta recuperar el timeline del usuario de Redis. Si el timeline no está en Redis, la función consulta la base de datos MySQL para recuperar el timeline del usuario y luego almacena el resultado en Redis.
+
+Por último, el script comprueba si se está ejecutando como un programa principal. Si es así, se conecta a la base de datos MySQL y llama a la función "get_user_timeline" para obtener el timeline del usuario especificado por el argumento de línea de comandos. Luego, imprime el resultado.
+
+### write_redis_inv.py
+
+El código es una implementación en Python que se conecta a una base de datos MySQL y escribe un tweet para un usuario específico en una tabla llamada "Tweets". También utiliza la biblioteca Redis para invalidar la caché del timeline de los seguidores del usuario.
+
+La función "connect_to_database" toma cuatro argumentos: host, usuario, contraseña y nombre de la base de datos. Utiliza la biblioteca PyMySQL para conectarse a la base de datos MySQL y devuelve la conexión establecida.
+
+La función "write_tweet" toma tres argumentos: la conexión a la base de datos devuelta por "connect_to_database", el identificador de usuario y el contenido del tweet. La función utiliza la conexión para insertar el tweet en la tabla "Tweets" junto con el identificador de usuario y la marca de tiempo. Luego se conecta a Redis para invalidar la caché del timeline de los seguidores del usuario.
+
+El fragmento de código en la parte inferior verifica si el script se está ejecutando como un programa independiente y llama a las funciones "connect_to_database" y "write_tweet" con los valores de los argumentos proporcionados a través de la línea de comandos.
