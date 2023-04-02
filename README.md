@@ -8,13 +8,13 @@ Para ejecutar este proyecto se requiere ejecutar dos contenedores:
 
 MySQL:
 
-```
+```bash
 docker run --name some-mysql -e MYSQL_ROOT_PASSWORD=123456 -p 3306:3306 -d mysql:latest
 ```
 
 REDIS:
 
-```
+```bash
 docker run --name some-redis -p 6379:6379 -d redis:latest
 ```
 
@@ -50,9 +50,6 @@ pip install -r requirements.txt
 ```
 
 En caso de que se desee actualizar los requerimientos: `pip freeze > requirements.txt`
-
-
-Esto restablecerá el prompt de la línea de comandos a su estado original y dejará de usar el entorno virtual.
 
 ## Preparamos la BBDD Relacional.
 Los scripts se deben ejecutar en una BBDD denóminada `twitter`.
@@ -191,8 +188,8 @@ ORDER BY timestamp DESC;
 
 Se implementan dos scripts que simulan las siguientes operaciones:
 
-. `timeline_mysql.py`: Lista el timeline de un usuario consultandolo directamente de Base de Datos
-. `write_mysql.py`: Crea un nuevo tweet para un usuario en particular, inserta el tweet en la Base de Datos.
+1. `timeline_mysql.py`: Lista el timeline de un usuario consultandolo directamente de Base de Datos
+2. `write_mysql.py`: Crea un nuevo tweet para un usuario en particular, inserta el tweet en la Base de Datos.
 
 ### timeline_mysql.py
 
@@ -219,8 +216,8 @@ Si el script se ejecuta directamente, se llama a la función `connect_to_databas
 
 En la segunda aproximación se implementan scripts que intentan habilitar un CACHE en Redis.
 
-. `timeline_redis.py`: Consulta si el timeline se encuentra en CACHE, si es así lo retorna caso contrario lo consylta de BBDD.
-. `write_redis_inv.py`: Escribe el tweet en BBDD luego intenta invalidar el CACHE, pero tiene un ERROR, se recomienda corregir el script.
+1. `timeline_redis.py`: Consulta si el timeline se encuentra en CACHE, si es así lo retorna caso contrario lo consylta de BBDD.
+2. `write_redis_inv.py`: Escribe el tweet en BBDD luego intenta invalidar el CACHE, pero tiene un ERROR, se recomienda corregir el script.
 
 ### timeline_redis.py
 
